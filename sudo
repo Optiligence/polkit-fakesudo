@@ -209,7 +209,7 @@ else
 fi
 
 if [[ $PreserveEnv == 1 ]];then
-	Command=${Command}" "$(env | xargs)
+	Command=${Command}" env "$(env -0 | xargs --null)
 elif [[ $PreserveEnv != 0 ]];then
 	Command=${Command}" "$(env | grep "$PreserveEnv")
 fi
@@ -234,4 +234,4 @@ if [[ $Debug == 1 ]];then
 	echo "Debug mode is on.The command generated is:"
 	echo -e "$Command"
 fi
-eval $Command
+exec $Command
