@@ -3,7 +3,7 @@ set -e
 
 ExecUser=""
 ExecGroup=()
-ChangeHomeDir=0
+ChangeHomeDir=1
 PreserveEnv=0
 Edit=""
 RunInBackground=0
@@ -202,13 +202,10 @@ else
 	else
 		ExecUser="root"
 	fi
-	Command=${Command}" bash -c \"cd "${PWD}" && HOME="
+	Command=${Command}" --keep-cwd"
 	if [[ $ChangeHomeDir == 0 ]];then
-		Command=${Command}${HOME}
-	else
-		Command=${Command}$(grep $ExecUser /etc/passwd | awk -F ':' '{print $6}')
+		Command=${Command}" env HOME=${HOME}"
 	fi
-	Command=${Command}" &&"
 fi
 
 if [[ $PreserveEnv == 1 ]];then
@@ -231,10 +228,6 @@ fi
 
 if [[ $RunInBackground == 1 ]];then
 	Command=${Command}" > /dev/null 2>&1 &"
-fi
-    
-if [[ $Login != 1 ]];then
-	Command=${Command}"\""
 fi
 
 if [[ $Debug == 1 ]];then
