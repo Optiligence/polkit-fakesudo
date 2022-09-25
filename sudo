@@ -12,6 +12,8 @@ Debug=1
 Help=0
 SpecifiedVariables=()
 
+echo '>' sudo "$@"
+
 printhelp(){
 	cat /usr/share/polkit-fakesudo/help1
 	if [[ $1 == "short" ]];then
@@ -133,6 +135,7 @@ while : ;do
 		;;
 	--preserve-env=*)
 		PreserveEnv=${1#*=}
+		shift
 		;;
 	-i | --login)
 		checkallconflicts
@@ -199,8 +202,6 @@ else
 	fi
 	if [[ $ExecUser ]];then
 		Command=${Command}" --user "${ExecUser}
-	else
-		ExecUser="root"
 	fi
 	Command=${Command}" --keep-cwd"
 	if [[ $ChangeHomeDir == 0 ]];then
@@ -210,8 +211,21 @@ fi
 
 if [[ $PreserveEnv == 1 ]];then
 	Command=${Command}" env "$(env -0 | xargs --null)
-elif [[ $PreserveEnv != 0 ]];then
-	Command=${Command}" "$(env | grep "$PreserveEnv")
+elif [[ $PreserveEnv && $PreserveEnv != 0 ]];then
+	Command=${Command}" env SUDO_USER=$(id -un)"
+	#echo specific env: »$PreserveEnv«
+	vars=
+	for e in $(echo $PreserveEnv | tr ',' ' '); do
+		var=$(env | grep "^$e=" || true)
+		if [[ $var ]];then
+			vars=${vars}" ${var}"
+			#echo '>>' $var
+			#echo '>' $vars
+		fi
+	done
+	if [[ $vars ]];then
+		Command=${Command}" env${vars}"
+	fi
 fi
 
 if [[ ${#SpecifiedVariables[@]} != 0 ]];then
@@ -220,7 +234,7 @@ fi
 
 if [[ $Edit ]];then
 	Command=${Command}" ${editor} "${Edit}
-elif [[ ${MainCommand[1]} == "--help" ]];then
+elif [[ ${#MainCommand[@]} > 1 && ${MainCommand[1]} == "--help" ]];then
 	printhelp short
 elif [[ ${#MainCommand[@]} != 0 ]];then
 	Command=${Command}" ${MainCommand[*]}"
@@ -231,7 +245,7 @@ if [[ $RunInBackground == 1 ]];then
 fi
 
 if [[ $Debug == 1 ]];then
-	echo "Debug mode is on.The command generated is:"
-	echo -e "$Command"
+	#echo "Debug mode is on. The command generated is:"
+	echo -e "→ $Command"
 fi
 exec $Command
